@@ -10,16 +10,37 @@ const DB_URL = `https://kvdb.io/${BUCKET_ID}/global_scores`;
 
 // kvdb.io에서 비동기로 점수 데이터 로드
 async function loadScores() {
+    let scores = {};
     try {
         const response = await fetch(DB_URL);
         if (response.status === 200) {
             const text = await response.text();
-            return JSON.parse(text) || {};
+            scores = JSON.parse(text) || {};
         }
     } catch (e) {
         console.error("Error loading scores from kvdb:", e);
     }
-    return {};
+
+    // 100개의 가상 더미 플레이어 데이터를 결정론적 수식으로 자동 주입
+    for (let i = 1; i <= 100; i++) {
+        const dummyId = `dummy_player_${i}`;
+        if (!scores[dummyId]) {
+            let score;
+            const seed = (i * 37) % 100; // 결정론적 고유 분산 시드
+            if (seed < 10) {
+                score = 500 + (seed * 35); // 500m ~ 850m
+            } else if (seed < 30) {
+                score = 250 + (seed * 12); // 250m ~ 490m
+            } else if (seed < 70) {
+                score = 80 + (seed * 4); // 80m ~ 240m
+            } else {
+                score = 10 + (seed - 70) * 2; // 10m ~ 70m
+            }
+            scores[dummyId] = score;
+        }
+    }
+
+    return scores;
 }
 
 // kvdb.io에 비동기로 점수 데이터 갱신 저장
