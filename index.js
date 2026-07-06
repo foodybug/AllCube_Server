@@ -1,47 +1,52 @@
 const express = require('express');
-const fs = require('fs');
-const path = require('path');
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 
-const DATA_FILE = path.join(__dirname, 'scores.json');
+// kvdb.io 고유 데이터베이스 버킷 주소 설정
+const BUCKET_ID = "allcube_bucket_db_861d7f2"; 
+const DB_URL = `https://kvdb.io/${BUCKET_ID}/global_scores`;
 
-// 로컬에서 기존 점수 파일 읽기
-function loadScores() {
+// kvdb.io에서 비동기로 점수 데이터 로드
+async function loadScores() {
     try {
-        if (fs.existsSync(DATA_FILE)) {
-            const raw = fs.readFileSync(DATA_FILE, 'utf8');
-            return JSON.parse(raw);
+        const response = await fetch(DB_URL);
+        if (response.status === 200) {
+            const text = await response.text();
+            return JSON.parse(text) || {};
         }
     } catch (e) {
-        console.error("Error loading scores:", e);
+        console.error("Error loading scores from kvdb:", e);
     }
     return {};
 }
 
-// 점수 파일 쓰기
-function saveScores(scores) {
+// kvdb.io에 비동기로 점수 데이터 갱신 저장
+async function saveScores(scores) {
     try {
-        fs.writeFileSync(DATA_FILE, JSON.stringify(scores, null, 2), 'utf8');
+        await fetch(DB_URL, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(scores)
+        });
     } catch (e) {
-        console.error("Error saving scores:", e);
+        console.error("Error saving scores to kvdb:", e);
     }
 }
 
 // 점수 등록 및 등수 조회 API
-app.post('/submit_score', (req, res) => {
+app.post('/submit_score', async (req, res) => {
     const { deviceId, height } = req.body;
     if (!deviceId || typeof height !== 'number') {
         return res.status(400).json({ error: "Invalid parameters. Require 'deviceId' (string) and 'height' (number)." });
     }
 
-    const scores = loadScores();
+    const scores = await loadScores();
     // 최고 점수만 갱신
     if (!scores[deviceId] || scores[deviceId] < height) {
         scores[deviceId] = height;
-        saveScores(scores);
+        await saveScores(scores);
     }
 
     // 모든 플레이어의 점수를 내림차순 정렬
@@ -75,8 +80,8 @@ app.post('/submit_score', (req, res) => {
 });
 
 // 상위 10위 리더보드 가져오기 API (선택사항)
-app.get('/get_rankings', (req, res) => {
-    const scores = loadScores();
+app.get('/get_rankings', async (req, res) => {
+    const scores = await loadScores();
     const sortedScores = Object.entries(scores)
         .map(([id, score]) => ({ id, score }))
         .sort((a, b) => b.score - a.score)
@@ -87,7 +92,6 @@ app.get('/get_rankings', (req, res) => {
 app.listen(PORT, () => {
     console.log(`=======================================================`);
     console.log(`  AllCube Leaderboard Web Server Started Successfully!`);
-    console.log(`  Running on http://localhost:${PORT}`);
-    console.log(`  Press Ctrl+C to stop.`);
+    console.log(`  Running on port: ${PORT}`);
     console.log(`=======================================================`);
-});
+});
