@@ -5,7 +5,7 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 
 // kvdb.io 고유 데이터베이스 버킷 주소 설정
-const BUCKET_ID = "allcubebucketdb861d"; 
+const BUCKET_ID = "AnpebZkcCqTHDuAW1e6j3L"; 
 const DB_URL = `https://kvdb.io/${BUCKET_ID}/global_scores`;
 
 // kvdb.io에서 비동기로 점수 데이터 로드
