@@ -4,21 +4,22 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 
-// kvdb.io 고유 데이터베이스 버킷 주소 설정
-const BUCKET_ID = "EY2VKazorjdeYhkojeHCz4"; 
-const DB_URL = `https://kvdb.io/${BUCKET_ID}/global_scores`;
+// jsonbin-zeta 클라우드 스토리지 빈 주소 설정
+const DB_URL = "https://jsonbin-zeta.vercel.app/api/bins/8x1U1T-pZU";
 
-// kvdb.io에서 비동기로 점수 데이터 로드
+// jsonbin-zeta에서 비동기로 점수 데이터 로드
 async function loadScores() {
     let scores = {};
     try {
         const response = await fetch(DB_URL);
         if (response.status === 200) {
             const text = await response.text();
-            scores = JSON.parse(text) || {};
+            const parsed = JSON.parse(text || "{}");
+            // jsonbin-zeta의 래핑된 데이터 구조가 있는 경우 대응
+            scores = parsed.data || parsed || {};
         }
     } catch (e) {
-        console.error("Error loading scores from kvdb:", e);
+        console.error("Error loading scores from jsonbin-zeta:", e);
     }
 
     // 100개의 가상 더미 플레이어 데이터를 결정론적 수식으로 자동 주입
@@ -43,7 +44,7 @@ async function loadScores() {
     return scores;
 }
 
-// kvdb.io에 비동기로 점수 데이터 갱신 저장
+// jsonbin-zeta에 비동기로 점수 데이터 갱신 저장
 async function saveScores(scores) {
     try {
         await fetch(DB_URL, {
@@ -52,7 +53,7 @@ async function saveScores(scores) {
             body: JSON.stringify(scores)
         });
     } catch (e) {
-        console.error("Error saving scores to kvdb:", e);
+        console.error("Error saving scores to jsonbin-zeta:", e);
     }
 }
 
