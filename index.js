@@ -76,28 +76,45 @@ app.post('/submit_score', async (req, res) => {
         .map(([id, score]) => ({ id, score }))
         .sort((a, b) => b.score - a.score);
 
-    // 등수 계산 (동점자는 동일 등수 부여)
+    // 등수 계산 및 각 항목의 상세 정보가 포함된 랭킹 리스트 구축 (동점자 처리 규칙 적용)
     let rank = 1;
     let rankIndex = 1;
+    const scoredListWithRank = [];
     for (let i = 0; i < sortedScores.length; i++) {
         if (i > 0 && sortedScores[i].score < sortedScores[i - 1].score) {
             rank = rankIndex;
         }
-        if (sortedScores[i].id === deviceId) {
-            break;
-        }
+        scoredListWithRank.push({
+            rank: rank,
+            deviceId: sortedScores[i].id,
+            height: sortedScores[i].score,
+            isSelf: sortedScores[i].id === deviceId
+        });
         rankIndex++;
     }
 
+    // 내 디바이스의 데이터 검출
+    const myRankItem = scoredListWithRank.find(item => item.isSelf);
+    const myRank = myRankItem ? myRankItem.rank : 1;
     const totalPlayers = sortedScores.length;
-    const topPercentage = (rank / totalPlayers) * 100.0;
+    const topPercentage = (myRank / totalPlayers) * 100.0;
 
-    console.log(`[Score Submitted] Device: ${deviceId}, Height: ${height}m -> Rank: ${rank}/${totalPlayers} (Top ${topPercentage.toFixed(2)}%)`);
+    // 내 위치(Index)를 기준으로 상위 3명, 하위 3명(총 최대 7명)의 랭킹 윈도우 슬라이싱
+    const myIndex = scoredListWithRank.findIndex(item => item.isSelf);
+    const startIdx = Math.max(0, myIndex - 3);
+    const endIdx = Math.min(scoredListWithRank.length - 1, myIndex + 3);
+    const leaderboardWindow = [];
+    for (let i = startIdx; i <= endIdx; i++) {
+        leaderboardWindow.push(scoredListWithRank[i]);
+    }
+
+    console.log(`[Score Submitted] Device: ${deviceId}, Height: ${height}m -> Rank: ${myRank}/${totalPlayers} (Top ${topPercentage.toFixed(2)}%)`);
 
     res.json({
-        rank: rank,
+        rank: myRank,
         topPercentage: parseFloat(topPercentage.toFixed(2)),
-        totalPlayers: totalPlayers
+        totalPlayers: totalPlayers,
+        leaderboardWindow: leaderboardWindow
     });
 });
 
