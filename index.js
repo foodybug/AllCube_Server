@@ -22,9 +22,33 @@ async function loadScores() {
         console.error("Error loading scores from jsonbin-zeta:", e);
     }
 
+    // 기존의 단순 형태 더미 플레이어(dummy_player_*) 제거
+    Object.keys(scores).forEach(key => {
+        if (key.startsWith('dummy_player_')) {
+            delete scores[key];
+        }
+    });
+
+    const ADJECTIVES = [
+        "Speedy", "Hyper", "Neon", "Alpha", "Pixel", "Shadow", "Apex", "Vortex", "Cosmic", "Gravity",
+        "Retro", "Swift", "Rhythm", "Dash", "Sonic", "Glitch", "Cyber", "Electro", "Quantum", "Pulse",
+        "Astra", "Chrono", "Zenith", "Nova", "Super", "Mega", "Ultra", "Turbo", "Wild", "Crazy"
+    ];
+    const NOUNS = [
+        "Runner", "Master", "King", "Shifter", "Cube", "Pioneer", "Bounce", "Player", "Jumper", "Rider",
+        "Ninja", "Walker", "Cuber", "Box", "Dash", "Bouncer", "Grid", "Astro", "Sonic", "Alpha"
+    ];
+
+    const dummyNames = [];
+    for (let i = 0; i < ADJECTIVES.length; i++) {
+        for (let j = 0; j < NOUNS.length; j++) {
+            dummyNames.push(ADJECTIVES[i] + NOUNS[j]);
+        }
+    }
+
     // 100개의 가상 더미 플레이어 데이터를 결정론적 수식으로 자동 주입
     for (let i = 1; i <= 100; i++) {
-        const dummyId = `dummy_player_${i}`;
+        const dummyId = dummyNames[i - 1] || `Gamer_${i}`;
         if (!scores[dummyId]) {
             let score;
             const seed = (i * 37) % 100; // 결정론적 고유 분산 시드
